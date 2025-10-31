@@ -3,7 +3,7 @@ import os from "os";
 import path from "path";
 
 
-export type Config = {
+type Config = {
     dbUrl: string,
     currentUserName: string
 };
