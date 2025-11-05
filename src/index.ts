@@ -1,5 +1,5 @@
 import { readConfig, setUser } from "./config";
-import { CommandsRegistry, CommandHandler, handlerLogin, registerCommand, runCommand, handlerRegister, handlerResetUsers, handlerListUsers, handlerAgg, handlerAddFeed } from "./command";
+import { CommandsRegistry, CommandHandler, handlerLogin, registerCommand, runCommand, handlerRegister, handlerResetUsers, handlerListUsers, handlerAgg, handlerAddFeed, handlerListFeeds, handlerFollowFeed, handlerFollowing } from "./command";
 import { argv, exit } from 'node:process';
 
 async function main() {
@@ -12,7 +12,9 @@ async function main() {
   registerCommand(registry, "reset", handlerResetUsers);
   registerCommand(registry, "users", handlerListUsers);
   registerCommand(registry, "agg", handlerAgg);
-  registerCommand(registry, "addFeed", handlerAddFeed);
+  registerCommand(registry, "addfeed", handlerAddFeed);
+  registerCommand(registry, "feeds", handlerListFeeds);
+  registerCommand(registry, "following", handlerFollowing);
 
   // Args passed in to node are in an arrat called argv
   // The argv[0] is the path to the node binary '/home/threep/.nvm/versions/node/v20.17.0/bin/node'

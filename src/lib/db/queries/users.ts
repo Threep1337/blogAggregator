@@ -3,28 +3,25 @@
 import { db } from "..";
 import { feeds, users } from "../schema";
 import { eq, lt, gte, ne } from 'drizzle-orm';
+import { Feed,User } from "../";
 
-export async function createUser(name: string) {
+export async function DBCreateUser(name: string) {
   const [result] = await db.insert(users).values({ name: name }).returning();
   return result;
 }
 
-export async function getUser(name: string) {
+export async function DBGetUser(name: string) {
   const [result] = await db.select().from(users).where(eq(users.name, name));
   return result;
 }
 
-export async function deleteUsers() {
+export async function DBDeleteUsers() {
   const [result] = await db.delete(users);
   return result;
 }
 
-export async function getUsers() {
+export async function DBGetUsers() {
   const result = await db.select().from(users);
   return result;
 }
 
-export async function addDBFeed(name: string,url:string,user_id:string)
-{
-  await db.insert(feeds).values({name:name,url:url,user_id:user_id});
-}

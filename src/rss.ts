@@ -2,7 +2,7 @@ import { Agent } from "node:http";
 import { XMLParser } from "fast-xml-parser";
 import { error } from "node:console";
 import { desc } from "drizzle-orm";
-import { addDBFeed } from "./lib/db/queries/users";
+import { DBAddFeed } from "./lib/db/queries/feeds";
 import { feeds } from "./lib/db/schema";
 
 type RSSFeed = {
@@ -33,12 +33,6 @@ export async function fetchFeed(feedURL: string): Promise<RSSFeed>{
         }
     });
 
-    
-    //const response = await fetch(feedURL);
-
-
-    //console.log ("test");
-
     if (!response.ok)
     {
         throw new Error ("The fetch request failed!");
@@ -48,7 +42,6 @@ export async function fetchFeed(feedURL: string): Promise<RSSFeed>{
     const parser = new XMLParser();
     const parsedResponse = parser.parse(text);
     const stringResponse = JSON.stringify(parsedResponse);
-    //console.log(stringResponse);
 
     if (!parsedResponse.rss.channel)
     {
@@ -82,7 +75,6 @@ export async function fetchFeed(feedURL: string): Promise<RSSFeed>{
 
 
     for (let element of item){
-        // title, link, description, and pubDate.
         let title = element.title;
         let link = element.link;
         let description = element.description;
@@ -99,9 +91,6 @@ export async function fetchFeed(feedURL: string): Promise<RSSFeed>{
             pubDate:pubDate
         });
 
-        //console.log(`Title:${title}\nLink:${link}\nDescription:${description}\npubDate:${pubDate}\n`);
-
-        
     }
 
     const feedToReturn:RSSFeed = 
@@ -113,13 +102,11 @@ export async function fetchFeed(feedURL: string): Promise<RSSFeed>{
             item: parsedItems
         }
     }
-    //console.log ("end");
-    return feedToReturn
+    return feedToReturn;
 
 }
 
 export async function addFeed(name: string,url:string,user_id:string)
 {
-    
-    addDBFeed(name, url,user_id)
+    DBAddFeed(name, url,user_id)
 }
