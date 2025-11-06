@@ -2,9 +2,9 @@
 
 import { readConfig, setUser } from "./config";
 import { DBGetUser, DBCreateUser, DBDeleteUsers, DBGetUsers } from "./lib/db/queries/users";
-import { DBAddFeed,DBcreateFeedFollow,DBGetFeed,DBgetFeedFollowsForUser,DBListFeeds } from "./lib/db/queries/feeds";
+import { DBAddFeed, DBcreateFeedFollow, DBGetFeed, DBgetFeedFollowsForUser, DBListFeeds } from "./lib/db/queries/feeds";
 import { fetchFeed } from "./rss";
-import { Feed,User } from "./lib/db";
+import { Feed, User } from "./lib/db";
 import { UniqueOnConstraintBuilder } from "drizzle-orm/gel-core";
 
 // A CommandHandler type is a function that takes a command name and a variable number of arguments, it processes the arguments and doesn't return anything.
@@ -51,7 +51,7 @@ export async function handlerRegister(cmdName: string, ...args: string[]) {
 
 export async function handlerListFeeds(cmdName: string, ...args: string[]) {
     const feedList = await DBListFeeds();
-    for (let feed of feedList){
+    for (let feed of feedList) {
         console.log(`Name: ${feed.name}`);
         console.log(`URL: ${feed.url}`);
         console.log(`UserName: ${feed.userName}`);
@@ -67,7 +67,7 @@ export async function handlerFollowFeed(cmdName: string, ...args: string[]) {
     const currentUserName = readConfig().currentUserName;
     const currentUser = await DBGetUser(currentUserName);
     const feedToFollow = await DBGetFeed(args[0]);
-    const addFeedFollowResult = await DBcreateFeedFollow(feedToFollow,currentUser);
+    const addFeedFollowResult = await DBcreateFeedFollow(feedToFollow, currentUser);
     console.log("Added new feed follow");
     console.log(`User: ${addFeedFollowResult.userName}`);
     console.log(`Feed: ${addFeedFollowResult.feedName}`);
@@ -111,7 +111,7 @@ export async function handlerFollowing(cmdName: string, ...args: string[]) {
     const currentUser = await DBGetUser(currentUserName);
     const feedsUserFollows = await DBgetFeedFollowsForUser(currentUser);
     console.log(`Listing feeds that ${currentUser.name} Follows...`)
-    for (let item of feedsUserFollows){
+    for (let item of feedsUserFollows) {
         console.log(`Feed: ${item.FeedName}`);
     }
 
@@ -128,25 +128,23 @@ export async function handlerAddFeed(cmdName: string, ...args: string[]) {
 
     const userName = readConfig().currentUserName;
 
-    if (!userName)
-    {
+    if (!userName) {
         throw new Error("Can't set a feed without a logged in user!");
     }
 
     const user = await DBGetUser(userName);
 
-    const newFeed = await DBAddFeed(args[0],args[1],user.id);
-    
-    const newFeedFollow = await DBcreateFeedFollow(newFeed,user);
+    const newFeed = await DBAddFeed(args[0], args[1], user.id);
 
-    printFeed(newFeed,user);
+    const newFeedFollow = await DBcreateFeedFollow(newFeed, user);
+
+    printFeed(newFeed, user);
 
 }
 
-export async function printFeed(feed:Feed,user:User)
-{
-    console.log(`Feed: ${JSON.stringify(feed,null,2)}`);
-    console.log(`User: ${JSON.stringify(user,null,2)}`);
+export async function printFeed(feed: Feed, user: User) {
+    console.log(`Feed: ${JSON.stringify(feed, null, 2)}`);
+    console.log(`User: ${JSON.stringify(user, null, 2)}`);
 }
 
 // This function registers a command to the commands registry

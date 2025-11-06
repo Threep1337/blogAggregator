@@ -14,6 +14,7 @@ async function main() {
   registerCommand(registry, "agg", handlerAgg);
   registerCommand(registry, "addfeed", handlerAddFeed);
   registerCommand(registry, "feeds", handlerListFeeds);
+  registerCommand(registry, "follow", handlerFollowFeed);
   registerCommand(registry, "following", handlerFollowing);
 
   // Args passed in to node are in an arrat called argv

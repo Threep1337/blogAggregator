@@ -45,6 +45,6 @@ export async function DBgetFeedFollowsForUser(user:User){
   const result = await db.select({
     FeedName: feeds.name,
     UserName: users.name
-  }).from(feedsFollows).innerJoin(users,eq(feedsFollows.user_id,users.id)).innerJoin(feeds,eq(feedsFollows.feed_id,feeds.id));
+  }).from(feedsFollows).innerJoin(users,eq(feedsFollows.user_id,users.id)).innerJoin(feeds,eq(feedsFollows.feed_id,feeds.id)).where(eq(users.id,user.id));
   return result;
 }
