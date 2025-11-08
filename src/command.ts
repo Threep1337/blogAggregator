@@ -2,13 +2,20 @@
 
 import { readConfig, setUser } from "./config";
 import { DBGetUser, DBCreateUser, DBDeleteUsers, DBGetUsers } from "./lib/db/queries/users";
-import { DBAddFeed, DBcreateFeedFollow, DBGetFeed, DBgetFeedFollowsForUser, DBListFeeds } from "./lib/db/queries/feeds";
-import { fetchFeed } from "./rss";
+import { DBAddFeed, DBcreateFeedFollow, DBGetFeed, DBgetFeedFollowsForUser, DBListFeeds, DBUnfollowFeed } from "./lib/db/queries/feeds";
+import { fetchFeed, scrapeFeeds } from "./rss";
 import { Feed, User } from "./lib/db";
 import { UniqueOnConstraintBuilder } from "drizzle-orm/gel-core";
 
 // A CommandHandler type is a function that takes a command name and a variable number of arguments, it processes the arguments and doesn't return anything.
 export type CommandHandler = (cmdName: string, ...args: string[]) => Promise<void>;
+
+export type UserCommandHandler = (
+    cmdName: string,
+    user: User,
+    ...args: string[]
+) => Promise<void>;
+
 
 // A CommandsRegistry type is used to map a command name, to a function that handles the command
 export type CommandsRegistry = Record<string, CommandHandler>;
@@ -58,19 +65,28 @@ export async function handlerListFeeds(cmdName: string, ...args: string[]) {
     }
 }
 
-export async function handlerFollowFeed(cmdName: string, ...args: string[]) {
+export async function handlerFollowFeed(cmdName: string, user: User, ...args: string[]) {
     if (!args[0]) {
         throw new Error("A feed url must be provided.");
     }
 
     //Get the current user first
-    const currentUserName = readConfig().currentUserName;
-    const currentUser = await DBGetUser(currentUserName);
+    // const currentUserName = readConfig().currentUserName;
+    // const currentUser = await DBGetUser(currentUserName);
     const feedToFollow = await DBGetFeed(args[0]);
-    const addFeedFollowResult = await DBcreateFeedFollow(feedToFollow, currentUser);
+    const addFeedFollowResult = await DBcreateFeedFollow(feedToFollow, user);
     console.log("Added new feed follow");
     console.log(`User: ${addFeedFollowResult.userName}`);
     console.log(`Feed: ${addFeedFollowResult.feedName}`);
+}
+
+export async function handlerUnfollowFeed(cmdName: string, user: User, ...args: string[]) {
+    if (!args[0]) {
+        throw new Error("A feed url must be provided.");
+    }
+    const feedToUnFollow = await DBGetFeed(args[0]);
+
+    await DBUnfollowFeed(feedToUnFollow, user);
 }
 
 // This function resets all users in the database.
@@ -80,6 +96,15 @@ export async function handlerResetUsers(cmdName: string, ...args: string[]) {
     console.log("The users table has been cleared.")
 
 }
+
+
+// Handler to run arbitrary debug code during development
+export async function handlerDebug(cmdName: string, ...args: string[]) {
+    console.log("Running Debug command.");
+    await scrapeFeeds();
+
+}
+
 
 // This function lists all users in the database, and displays the currently logged in user.
 export async function handlerListUsers(cmdName: string, ...args: string[]) {
@@ -99,25 +124,77 @@ export async function handlerListUsers(cmdName: string, ...args: string[]) {
     }
 }
 
-export async function handlerAgg(cmdName: string, ...args: string[]) {
-    //console.log ("Right before calling fetchFeed");
-    let feed = await fetchFeed("https://www.wagslane.dev/index.xml");
-    console.log(JSON.stringify(feed, null, 2));
+function parseDuration(durationStr: string): number {
+
+    const regex = /^(\d+)(ms|s|m|h)$/;
+    const match = durationStr.match(regex);
+    if (match === null) {
+        throw new Error("Unable to parse the duration passed in");
+    }
+
+    let multiplier = 1;
+    switch (match[2]) {
+        case "ms":
+            multiplier = 1;
+            break;
+        case "s":
+            multiplier = 1000;
+            break;
+        case "m":
+            multiplier = 1000 * 60;
+            break;
+        case "h":
+            multiplier = 1000 * 60 * 60;
+            break;
+        default:
+            break;
+    }
+
+    return Number(match[1]) * multiplier;
+
 }
 
-export async function handlerFollowing(cmdName: string, ...args: string[]) {
+export async function handlerAgg(cmdName: string, ...args: string[]) {
+    //console.log ("Right before calling fetchFeed");
+    //let feed = await fetchFeed("https://www.wagslane.dev/index.xml");
+    //console.log(JSON.stringify(feed, null, 2));
+    if (!args[0]) {
+        throw new Error("A duration between requests must be provided");
+    }
+    const timeBetweenRequests = parseDuration(args[0]);
+    console.log(`Collecting feeds every ${timeBetweenRequests}ms`);
+
+    //scrapeFeeds().catch(handleError);
+    scrapeFeeds();
+    const interval = setInterval(() => {
+        //scrapeFeeds().catch(handleError);
+        scrapeFeeds();
+    }, timeBetweenRequests);
+
+    await new Promise<void>((resolve) => {
+        process.on("SIGINT", () => {
+            console.log("Shutting down feed aggregator...");
+            clearInterval(interval);
+            resolve();
+        });
+    });
+
+
+}
+
+export async function handlerFollowing(cmdName: string, user: User, ...args: string[]) {
     //Get the current user first
-    const currentUserName = readConfig().currentUserName;
-    const currentUser = await DBGetUser(currentUserName);
-    const feedsUserFollows = await DBgetFeedFollowsForUser(currentUser);
-    console.log(`Listing feeds that ${currentUser.name} Follows...`)
+    // const currentUserName = readConfig().currentUserName;
+    // const currentUser = await DBGetUser(currentUserName);
+    const feedsUserFollows = await DBgetFeedFollowsForUser(user);
+    console.log(`Listing feeds that ${user.name} Follows...`)
     for (let item of feedsUserFollows) {
         console.log(`Feed: ${item.FeedName}`);
     }
 
 }
 
-export async function handlerAddFeed(cmdName: string, ...args: string[]) {
+export async function handlerAddFeed(cmdName: string, user: User, ...args: string[]) {
     if (!args[0]) {
         throw new Error("A feed name must be provided");
     }
@@ -126,13 +203,11 @@ export async function handlerAddFeed(cmdName: string, ...args: string[]) {
         throw new Error("A feed url must be provided");
     }
 
-    const userName = readConfig().currentUserName;
+    // const userName = readConfig().currentUserName;
 
-    if (!userName) {
-        throw new Error("Can't set a feed without a logged in user!");
-    }
-
-    const user = await DBGetUser(userName);
+    // if (!userName) {
+    //     throw new Error("Can't set a feed without a logged in user!");
+    // }
 
     const newFeed = await DBAddFeed(args[0], args[1], user.id);
 

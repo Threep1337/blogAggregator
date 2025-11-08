@@ -2,7 +2,7 @@ import { Agent } from "node:http";
 import { XMLParser } from "fast-xml-parser";
 import { error } from "node:console";
 import { desc } from "drizzle-orm";
-import { DBAddFeed } from "./lib/db/queries/feeds";
+import { DBAddFeed, DBGetNextFeedToFetch, DBMarkFeedFetched } from "./lib/db/queries/feeds";
 import { feeds } from "./lib/db/schema";
 
 type RSSFeed = {
@@ -109,4 +109,17 @@ export async function fetchFeed(feedURL: string): Promise<RSSFeed>{
 export async function addFeed(name: string,url:string,user_id:string)
 {
     DBAddFeed(name, url,user_id)
+}
+
+export async function scrapeFeeds(){
+    const feedToFetch = await DBGetNextFeedToFetch();
+    DBMarkFeedFetched(feedToFetch);
+    let feedData = await fetchFeed(feedToFetch.url);
+    //console.log(JSON.stringify(feedData, null, 2));
+
+    for (let feedChannelItem of feedData.channel.item){
+        console.log(feedChannelItem.title);
+    }
+
+    
 }

@@ -1,6 +1,6 @@
 import { db } from "..";
 import { feeds, feedsFollows, users } from "../schema";
-import { eq, lt, gte, ne } from 'drizzle-orm';
+import { eq, lt, gte, ne,and,sql,desc } from 'drizzle-orm';
 import { Feed,User } from "../";
 
 export async function DBAddFeed(name: string,url:string,user_id:string): Promise<Feed>
@@ -34,6 +34,24 @@ export async function DBcreateFeedFollow(feed:Feed,user:User)
     userName: users.name
   }).from(feedsFollows).innerJoin(users,eq(feedsFollows.user_id,users.id)).innerJoin(feeds,eq(feedsFollows.feed_id,feeds.id)).where(eq(feedsFollows.id,newFeedFollow.id));
   return returnFeedFollow;
+}
+
+export async function DBUnfollowFeed(feed:Feed,user:User){
+  const [result] = await db.delete(feedsFollows).where(and(eq(feedsFollows.user_id, user.id),eq(feedsFollows.feed_id,feed.id)));
+}
+
+export async function DBMarkFeedFetched(feed:Feed){
+  const [result] = await db.update(feeds).set({updatedAt:sql`NOW()`,lastFetchedAt:sql`NOW()`}).where(eq(feeds.id,feed.id))
+}
+
+export async function DBGetNextFeedToFetch():Promise<Feed>{
+    const [result] = await db
+    .select()
+    .from(feeds)
+    .orderBy(sql`${feeds.updatedAt} DESC NULLS FIRST`) // nulls first
+    .limit(1);
+
+  return result;
 }
 
 export async function DBGetFeed(feedUrl:string){
