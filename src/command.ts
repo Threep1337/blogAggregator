@@ -155,19 +155,14 @@ function parseDuration(durationStr: string): number {
 }
 
 export async function handlerAgg(cmdName: string, ...args: string[]) {
-    //console.log ("Right before calling fetchFeed");
-    //let feed = await fetchFeed("https://www.wagslane.dev/index.xml");
-    //console.log(JSON.stringify(feed, null, 2));
     if (!args[0]) {
         throw new Error("A duration between requests must be provided");
     }
     const timeBetweenRequests = parseDuration(args[0]);
     console.log(`Collecting feeds every ${timeBetweenRequests}ms`);
 
-    //scrapeFeeds().catch(handleError);
     scrapeFeeds();
     const interval = setInterval(() => {
-        //scrapeFeeds().catch(handleError);
         scrapeFeeds();
     }, timeBetweenRequests);
 
